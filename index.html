@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>soft life · clock + weather</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Jost:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --amaranth:#933B5B; --thulian:#B5728A; --brook:#AABAAE; --chalk:#E3D6BF; --olive:#9F9679;
+    --bg:transparent; --card:#F4EDE2; --ink:#933B5B; --soft:#9F9679; --line:#E3D6BF;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --card:#2B2326; --ink:#E7B7C7; --soft:#B9B196; --line:#3A3034; }
+  }
+  :root[data-theme="dark"]{ --card:#2B2326; --ink:#E7B7C7; --soft:#B9B196; --line:#3A3034; }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);font-family:"Jost",system-ui,sans-serif;color:var(--soft)}
+  body{display:flex;flex-direction:column;align-items:center;gap:14px;padding:10px 8px}
+  .clock{display:flex;align-items:center;gap:8px}
+  .flip{position:relative;background:var(--card);border-radius:14px;width:86px;height:96px;
+    display:flex;align-items:center;justify-content:center;
+    font-family:"Cormorant Garamond",serif;font-weight:600;font-size:64px;color:var(--ink);
+    box-shadow:0 1px 0 rgba(0,0,0,.04),0 8px 18px -10px rgba(147,59,91,.35)}
+  .flip::after{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line)}
+  .colon{font-family:"Cormorant Garamond",serif;font-size:48px;color:var(--thulian);margin-top:-6px}
+  .ampm{align-self:flex-end;background:var(--card);border-radius:8px;padding:4px 7px;
+    font-size:12px;letter-spacing:.12em;color:var(--ink);margin-bottom:6px}
+  .date{font-size:11px;letter-spacing:.32em;text-transform:lowercase;color:var(--soft)}
+  .wx{width:100%;max-width:340px;background:var(--card);border-radius:14px;padding:12px 14px}
+  .now{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+  .city{font-size:10px;letter-spacing:.3em;text-transform:lowercase;color:var(--soft)}
+  .temp{font-family:"Cormorant Garamond",serif;font-size:34px;color:var(--ink);line-height:1}
+  .desc{font-size:11px;color:var(--soft)}
+  .days{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center}
+  .d{font-size:10px;letter-spacing:.12em;color:var(--soft)}
+  .i{font-size:18px;margin:2px 0}
+  .hi{font-size:12px;color:var(--ink)} .lo{font-size:11px;color:var(--soft)}
+  .hide{display:none}
+</style>
+</head>
+<body>
+  <div class="clock" id="clock">
+    <div class="flip" id="h">12</div><div class="colon">:</div><div class="flip" id="m">00</div>
+    <div class="ampm" id="ap">pm</div>
+  </div>
+  <div class="date" id="date"></div>
+  <div class="wx" id="wx">
+    <div class="now">
+      <div><div class="city" id="city">weather</div><div class="desc" id="desc">loading…</div></div>
+      <div class="temp" id="temp">–</div>
+    </div>
+    <div class="days" id="days"></div>
+  </div>
+<script>
+const q = new URLSearchParams(location.search);
+const mode = q.get("show") || "both";           // both | clock | weather
+const unit = (q.get("unit") || "c").toLowerCase(); // c | f
+const h24 = q.get("h24") === "1";
+if (q.get("theme")) document.documentElement.dataset.theme = q.get("theme");
+if (mode === "weather") { document.getElementById("clock").classList.add("hide"); document.getElementById("date").classList.add("hide"); }
+if (mode === "clock") document.getElementById("wx").classList.add("hide");
+
+function tick(){
+  const n = new Date(); let hr = n.getHours();
+  const ap = hr >= 12 ? "pm" : "am";
+  if (!h24) hr = hr % 12 || 12;
+  document.getElementById("h").textContent = String(hr).padStart(2,"0");
+  document.getElementById("m").textContent = String(n.getMinutes()).padStart(2,"0");
+  document.getElementById("ap").textContent = ap;
+  document.getElementById("ap").classList.toggle("hide", h24);
+  document.getElementById("date").textContent = n.toLocaleDateString("en-AU",{weekday:"long",day:"numeric",month:"long"}).toLowerCase();
+}
+tick(); setInterval(tick, 1000);
+
+const icons = c => c===0?"☀️":c<=2?"🌤️":c===3?"☁️":c<=48?"☁️":c<=67?"🌧️":c<=77?"❄️":c<=82?"🌦️":"⛈️";
+const words = c => c===0?"clear skies":c<=2?"mostly sunny":c===3?"cloudy":c<=48?"misty":c<=67?"rainy":c<=77?"snow":c<=82?"showers":"storms";
+
+async function where(){
+  const lat = q.get("lat"), lon = q.get("lon"), city = q.get("city");
+  if (lat && lon) return {lat, lon, name: city || ""};
+  if (city){
+    const r = await fetch("https://geocoding-api.open-meteo.com/v1/search?count=1&name=" + encodeURIComponent(city));
+    const j = await r.json(); if (j.results && j.results[0]) return {lat:j.results[0].latitude, lon:j.results[0].longitude, name:j.results[0].name};
+  }
+  return {lat:-33.87, lon:151.21, name:"sydney"};
+}
+async function weather(){
+  if (mode === "clock") return;
+  try{
+    const p = await where();
+    const u = "https://api.open-meteo.com/v1/forecast?latitude="+p.lat+"&longitude="+p.lon+
+      "&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=5"+
+      (unit==="f"?"&temperature_unit=fahrenheit":"");
+    const j = await (await fetch(u)).json();
+    const deg = "°" + unit.toUpperCase();
+    document.getElementById("city").textContent = (p.name||"").toLowerCase();
+    document.getElementById("temp").textContent = Math.round(j.current.temperature_2m) + "°";
+    document.getElementById("desc").textContent = icons(j.current.weather_code) + " " + words(j.current.weather_code);
+    document.getElementById("days").innerHTML = j.daily.time.map((t,i)=>{
+      const d = new Date(t+"T12:00").toLocaleDateString("en-AU",{weekday:"short"}).toLowerCase();
+      return '<div><div class="d">'+d+'</div><div class="i">'+icons(j.daily.weather_code[i])+'</div><div class="hi">'+Math.round(j.daily.temperature_2m_max[i])+'°</div><div class="lo">'+Math.round(j.daily.temperature_2m_min[i])+'°</div></div>';
+    }).join("");
+  }catch(e){ document.getElementById("desc").textContent = "weather unavailable"; }
+}
+weather(); setInterval(weather, 30*60*1000);
+</script>
+</body>
+</html>
