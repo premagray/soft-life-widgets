@@ -9,12 +9,12 @@
 <style>
   :root{
     --amaranth:#933B5B; --thulian:#B5728A; --brook:#AABAAE; --chalk:#E3D6BF; --olive:#9F9679;
-    --bg:transparent; --card:#F4EDE2; --ink:#933B5B; --soft:#9F9679; --line:#E3D6BF;
+    --bg:#FFFFFF; --card:#F4EDE2; --ink:#933B5B; --soft:#9F9679; --line:#E3D6BF;
   }
   @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){ --card:#2B2326; --ink:#E7B7C7; --soft:#B9B196; --line:#3A3034; }
+    :root:not([data-theme="light"]){ --bg:#191919; --card:#2B2326; --ink:#E7B7C7; --soft:#B9B196; --line:#3A3034; }
   }
-  :root[data-theme="dark"]{ --card:#2B2326; --ink:#E7B7C7; --soft:#B9B196; --line:#3A3034; }
+  :root[data-theme="dark"]{ --bg:#191919; --card:#2B2326; --ink:#E7B7C7; --soft:#B9B196; --line:#3A3034; }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{background:var(--bg);font-family:"Jost",system-ui,sans-serif;color:var(--soft)}
   body{display:flex;flex-direction:column;align-items:center;gap:14px;padding:10px 8px}
